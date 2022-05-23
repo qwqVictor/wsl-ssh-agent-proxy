@@ -18,21 +18,42 @@ jobs:
       with:
         name: ssh-agent-proxy
         path: ssh-agent-proxy
+  build-arm64:
+    name: Build ARM64
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        persist-credentials: false
+    - name: Build
+      run: GOARCH=arm64 make
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ssh-agent-proxy
+        path: ssh-agent-proxy-arm64
   release:
     name: Release
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     needs: build
     steps:
-    - name: Download Artifact
-      id: download
+    - name: Download amd64 Build
+      id: download-amd64
       uses: actions/download-artifact@v2
       with:
         name: ssh-agent-proxy
         path: .
+    - name: Download arm64 Build
+      id: download-arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: ssh-agent-proxy-arm64
+        path: .
     - name: Generate Checksum
-      run: sha256sum ssh-agent-proxy > sha256sum.txt
-    - name: Upload Release Asset
+      run: sha256sum ssh-agent-proxy ssh-agent-proxy-arm64 > sha256sum.txt
+    - name: Upload amd64 build
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -40,6 +61,15 @@ jobs:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ${{ steps.download.outputs.download-path }}/ssh-agent-proxy
         asset_name: ssh-agent-proxy
+        asset_content_type: application/octet-stream
+    - name: Upload arm64 build
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ steps.download.outputs.download-path }}/ssh-agent-proxy-arm64
+        asset_name: ssh-agent-proxy-arm64
         asset_content_type: application/octet-stream
     - name: Upload Checksum
       uses: actions/upload-release-asset@v1
